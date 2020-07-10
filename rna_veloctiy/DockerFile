@@ -1,0 +1,95 @@
+FROM rocker/tidyverse:3.6.1
+MAINTAINER Peter Kharchenko "peter_kharchenko@hms.harvard.edu"
+
+## INSTALLING LIBRARIES
+
+RUN apt-get update --yes && apt-get install --no-install-recommends --yes \
+  build-essential \
+  cmake \
+  git \
+  libbamtools-dev \
+  libboost-dev \
+  libboost-iostreams-dev \
+  libboost-log-dev \
+  libboost-system-dev \
+  libboost-test-dev \
+  libssl-dev \
+  libcurl4-openssl-dev \
+  libxml2-dev \
+  libz-dev \
+  curl \
+  libhdf5-cpp-100 \ 
+  libarmadillo7 \
+  libarmadillo-dev \
+  libbz2-dev \ 
+  liblzma-dev
+
+## INSTALLING R PACKAGES FROM CRAN
+
+RUN Rscript -e 'install.packages("devtools")'
+RUN Rscript -e 'install.packages("Rcpp")'
+RUN Rscript -e 'install.packages("RcppArmadillo")'
+RUN Rscript -e 'install.packages("Matrix")'
+RUN Rscript -e 'install.packages("mgcv")'
+RUN Rscript -e 'install.packages("abind")'
+RUN Rscript -e 'install.packages("igraph")'
+RUN Rscript -e 'install.packages("hdf5r")'
+RUN Rscript -e 'install.packages("Rtsne")'
+RUN Rscript -e 'install.packages("cluster")'
+RUN Rscript -e 'install.packages("data.table")'
+
+
+## INSTALLING R PACKAGES FROM BIOCONDUCTOR
+
+RUN Rscript -e 'BiocManager::install("pcaMethods")'
+RUN Rscript -e 'BiocManager::install("Rhtslib")'
+RUN Rscript -e 'BiocManager::install("limma")'
+RUN Rscript -e 'BiocManager::install("edgeR")'
+RUN Rscript -e 'BiocManager::install("Rsamtools")'
+RUN Rscript -e 'BiocManager::install("BiocGenerics")'
+RUN Rscript -e 'BiocManager::install("S4Vectors")'
+RUN Rscript -e 'BiocManager::install("IRanges")'
+RUN Rscript -e 'BiocManager::install("GenomeInfoDb")'
+RUN Rscript -e 'BiocManager::install("GenomicRanges")'
+RUN Rscript -e 'BiocManager::install("Biobase")'
+RUN Rscript -e 'BiocManager::install("DelayedArray")'
+RUN Rscript -e 'BiocManager::install("SummarizedExperiment")'
+RUN Rscript -e 'BiocManager::install("GenomicAlignments")'
+RUN Rscript -e 'BiocManager::install("Biostrings")'
+
+
+## INSTALLING PACKAGE RNA VELOCITY
+
+RUN useradd -m user
+USER user
+ENTRYPOINT ["/bin/bash"]
+WORKDIR "/home/user"
+
+RUN \
+  git clone https://github.com/velocyto-team/velocyto.R && \
+  mkdir -p ~/R/x86_64-redhat-linux-gnu-library/3.6.1
+
+RUN \
+  echo '.libPaths(c("~/R/x86_64-redhat-linux-gnu-library/3.6.1", .libPaths()))' > .Rprofile && \
+  Rscript -e 'devtools::install_local("~/velocyto.R/",dep=T)'
+
+
+ENV  LD_LIBRARY_PATH=/usr/local/lib/R/lib/:$LD_LIBRARY_PATH \
+  R_PROFILE=~/.Rprofile
+
+
+VOLUME /mnt
+
+
+
+# #################################################
+# DECLARE EXPECTED PORTS TO BE EXPOSED
+# #################################################
+
+# Rstudio listens on port 8787 by default
+# Container typically started with `-p 8989:8989`
+
+EXPOSE 8989
+
+
+CMD ["/init"]
